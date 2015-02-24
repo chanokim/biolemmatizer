@@ -2,29 +2,29 @@
  Copyright (c) 2012, Regents of the University of Colorado
  All rights reserved.
 
- Redistribution and use in source and binary forms, with or without modification, 
+ Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
 
- * Redistributions of source code must retain the above copyright notice, this 
+ * Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
-   
- * Redistributions in binary form must reproduce the above copyright notice, 
-    this list of conditions and the following disclaimer in the documentation 
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
-   
- * Neither the name of the University of Colorado nor the names of its 
-    contributors may be used to endorse or promote products derived from this 
+
+ * Neither the name of the University of Colorado nor the names of its
+    contributors may be used to endorse or promote products derived from this
     software without specific prior written permission.
 
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
- ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
@@ -50,25 +51,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
 import edu.northwestern.at.morphadorner.corpuslinguistics.lemmatizer.Lemmatizer;
+import edu.northwestern.at.morphadorner.corpuslinguistics.lexicon.DefaultWordLexicon;
 import edu.northwestern.at.morphadorner.corpuslinguistics.lexicon.Lexicon;
 import edu.northwestern.at.morphadorner.corpuslinguistics.lexicon.LexiconEntry;
 import edu.northwestern.at.morphadorner.corpuslinguistics.partsofspeech.PartOfSpeechTags;
 import edu.northwestern.at.morphadorner.corpuslinguistics.tokenizer.PennTreebankTokenizer;
 import edu.northwestern.at.morphadorner.corpuslinguistics.tokenizer.WordTokenizer;
 
-
 /**
- * BioLemmatizer: Lemmatize a word in biomedical texts and return its lemma; the part of speech
- * (POS) of the word is optional.
- * 
+ * BioLemmatizer: Lemmatize a word in biomedical texts and return its lemma; the
+ * part of speech (POS) of the word is optional.
+ *
  * <p>
  * Usage:
  * </p>
- * 
+ *
  * <p>
  * <code>
  * 	java -Xmx1G -jar biolemmatizer-core-1.0-jar-with-dependencies.jar [-l] {@literal <input_string>} [POS tag]   or<br>
@@ -76,26 +78,27 @@ import edu.northwestern.at.morphadorner.corpuslinguistics.tokenizer.WordTokenize
  *  java -Xmx1G -jar biolemmatizer-core-1.0-jar-with-dependencies.jar [-l] -t<br>
  * 	</code>
  * </p>
- * 
+ *
  * <p>
  * Example:
  * </p>
- * 
+ *
  * <p>
  * <code>
  * 	java -Xmx1G -jar biolemmatizer-core-1.0-jar-with-dependencies.jar catalyses NNS
  * </code>
  * </p>
- * 
+ *
  * <p>
  * Please see the README file for more usage examples
  * </p>
- * 
+ *
  * @author Haibin Liu <Haibin.Liu@ucdenver.edu>, William A Baumgartner Jr
- *         <William.Baumgartner@ucdenver.edu> and Karin Verspoor <Karin.Verspoor@ucdenver.edu>
+ *         <William.Baumgartner@ucdenver.edu> and Karin Verspoor
+ *         <Karin.Verspoor@ucdenver.edu>
  */
 
-public class BioLemmatizer {
+public class BioLemmatizer implements Serializable {
 	/** Lemma separator character */
 	public static String lemmaSeparator = "||";
 
@@ -118,24 +121,45 @@ public class BioLemmatizer {
 	public Map<String, String[]> mappingMajorClasstoPennPOS;
 
 	/** the Part-Of-Speech mapping file */
-	protected static String mappingFileName;
+	protected String mappingFileName;
 
 	/** POSEntry object to retrieve POS tag information */
 	public POSEntry posEntry;
 
 	/**
 	 * Default constructor loads the lexicon from the classpath
+	 * @param mappingMajorClasstoPennPOS2 
+	 * @param mappingPennPOStoNUPOS2 
+	 * @param lemmatizer2 
+	 * @param defaultWordLexicon 
+	 * @param bioWordLexicon 
 	 */
 	public BioLemmatizer() {
 		this(null);
 	}
+	public BioLemmatizer(BioWordLexicon bioWordLexicon, 
+			DefaultWordLexicon wordLexicon, 
+			MorphAdornerLemmatizer lemmatizer, 
+			Map<String, String[]> mappingPennPOStoNUPOS, Map<String, 
+			String[]> mappingMajorClasstoPennPOS) {
+		this.lemmatizer = lemmatizer;
+		this.wordLexicon = wordLexicon;
+		this.partOfSpeechTags = wordLexicon.getPartOfSpeechTags();
+		this.spellingTokenizer = new PennTreebankTokenizer();
+		this.lemmatizer.setLexicon(wordLexicon);
+		this.lemmatizer.setDictionary(setDictionary(wordLexicon));
+		this.mappingPennPOStoNUPOS = mappingPennPOStoNUPOS;
+		this.mappingMajorClasstoPennPOS = mappingMajorClasstoPennPOS;
+		this.posEntry = new POSEntry(wordLexicon, mappingPennPOStoNUPOS);
+	}
 
 	/**
 	 * Constructor to initialize the class fields
-	 * 
+	 *
 	 * @param lexiconFile
-	 *            a reference to the lexicon file to use. If null, the lexicon that comes with the
-	 *            BioLemmatizer distribution is loaded from the classpath
+	 *            a reference to the lexicon file to use. If null, the lexicon
+	 *            that comes with the BioLemmatizer distribution is loaded from
+	 *            the classpath
 	 */
 	public BioLemmatizer(File lexiconFile) {
 
@@ -163,11 +187,13 @@ public class BioLemmatizer {
 
 		// Specify the Part-Of-Speech mapping files
 		mappingFileName = "PennPOStoNUPOS.mapping";
-		InputStream is = BioLemmatizer.class.getResourceAsStream(mappingFileName);
+		InputStream is = BioLemmatizer.class
+				.getResourceAsStream(mappingFileName);
 		try {
 			mappingPennPOStoNUPOS = loadPOSMappingFile(is);
 		} catch (IOException e) {
-			throw new RuntimeException("Unable to load mapping: " + mappingFileName, e);
+			throw new RuntimeException("Unable to load mapping: "
+					+ mappingFileName, e);
 		}
 
 		mappingFileName = "MajorClasstoPennPOS.mapping";
@@ -175,7 +201,8 @@ public class BioLemmatizer {
 		try {
 			mappingMajorClasstoPennPOS = loadPOSMappingFile(is);
 		} catch (IOException e) {
-			throw new RuntimeException("Unable to load mapping: " + mappingFileName, e);
+			throw new RuntimeException("Unable to load mapping: "
+					+ mappingFileName, e);
 		}
 
 		// Get the POS tagsets
@@ -184,13 +211,15 @@ public class BioLemmatizer {
 
 	/**
 	 * Static method to load a Part-Of-Speech mapping file
-	 * 
+	 *
 	 * @param is
 	 *            InputStream of the mapping file
-	 * @return a Map object that stores the hierachical mapping information in the file
+	 * @return a Map object that stores the hierachical mapping information in
+	 *         the file
 	 * @throws IOException
 	 */
-	static Map<String, String[]> loadPOSMappingFile(InputStream is) throws IOException {
+	static Map<String, String[]> loadPOSMappingFile(InputStream is)
+			throws IOException {
 		Map<String, String[]> mapping = new HashMap<String, String[]>();
 
 		try {
@@ -216,9 +245,9 @@ public class BioLemmatizer {
 	}
 
 	/**
-	 * Create a dictionary from a word lexicon for validating lemmata resulted from lemmatization
-	 * rules
-	 * 
+	 * Create a dictionary from a word lexicon for validating lemmata resulted
+	 * from lemmatization rules
+	 *
 	 * @param wordLexicon
 	 *            a word lexicon
 	 * @return a set that contains a dictionary generated from the word lexicon
@@ -240,19 +269,20 @@ public class BioLemmatizer {
 
 	/**
 	 * Retrieve an array of corresponding NUPOS tags of a Penn Treebank POS tag
-	 * 
+	 *
 	 * @param partOfSpeech
 	 *            a POS tag
 	 * @return an array of corresponding NUPOS tags;
 	 */
 	private String[] getNUPOSTagFromPennPOS(String partOfSpeech) {
-		String[] nuPOSTag = mappingPennPOStoNUPOS.get(partOfSpeech.toUpperCase());
+		String[] nuPOSTag = mappingPennPOStoNUPOS.get(partOfSpeech
+				.toUpperCase());
 		return nuPOSTag != null ? nuPOSTag : new String[] { partOfSpeech };
 	}
 
 	/**
 	 * Retrieve an array of corresponding Penn Treebank POS tags of a NUPOS tag
-	 * 
+	 *
 	 * @param partOfSpeech
 	 *            a POS tag
 	 * @return an array of corresponding Penn Treebank POS tags;
@@ -267,12 +297,14 @@ public class BioLemmatizer {
 				}
 			}
 		}
-		return result.size() != 0 ? result.toArray(new String[result.size()]) : new String[] { partOfSpeech };
+		return result.size() != 0 ? result.toArray(new String[result.size()])
+				: new String[] { partOfSpeech };
 	}
 
 	/**
-	 * Retrieve sibling Penn Treebank POS tags of a Penn Treebank POS tag from the POS hierarchy
-	 * 
+	 * Retrieve sibling Penn Treebank POS tags of a Penn Treebank POS tag from
+	 * the POS hierarchy
+	 *
 	 * @param partOfSpeech
 	 *            a Penn Treebank POS tag
 	 * @return sibling Penn Treebank POS tags of the Penn Treebank POS tag
@@ -319,8 +351,9 @@ public class BioLemmatizer {
 	}
 
 	/**
-	 * Retrieve sibling NUPOS tags of a Penn Treebank POS tag from the POS hierarchy
-	 * 
+	 * Retrieve sibling NUPOS tags of a Penn Treebank POS tag from the POS
+	 * hierarchy
+	 *
 	 * @param partOfSpeech
 	 *            a Penn Treebank POS tag
 	 * @return sibling NUPOS tags of the Penn Treebank POS tag
@@ -358,7 +391,8 @@ public class BioLemmatizer {
 			List<String> merge = new ArrayList<String>();
 			for (String pos : mappingMajorClasstoPennPOS.get(foundKey)) {
 				if (!pos.equals(partOfSpeech)) {
-					merge.addAll(Arrays.asList(mappingPennPOStoNUPOS.get(pos.toUpperCase())));
+					merge.addAll(Arrays.asList(mappingPennPOStoNUPOS.get(pos
+							.toUpperCase())));
 				}
 			}
 
@@ -370,11 +404,11 @@ public class BioLemmatizer {
 
 	/**
 	 * Retrieve lemmas and the corresponding categories of the input string
-	 * 
+	 *
 	 * @param spelling
 	 *            an input string
-	 * @return a Map object that stores lemmas and categories of the string; key: category, value:
-	 *         lemma
+	 * @return a Map object that stores lemmas and categories of the string;
+	 *         key: category, value: lemma
 	 */
 	private Map<String, String> getLemmasAndCategories(String spelling) {
 		Map<String, String> lemmasAndCategories = new HashMap<String, String>();
@@ -386,7 +420,7 @@ public class BioLemmatizer {
 
 	/**
 	 * Clean up the raw lemma resulted from lemmatization rules
-	 * 
+	 *
 	 * @param lemma
 	 *            a raw lemma
 	 * @return clean lemma
@@ -402,12 +436,12 @@ public class BioLemmatizer {
 
 	/**
 	 * Convert special unicode characters into modern English spelling
-	 * 
+	 *
 	 * @param input
 	 *            an input string
 	 * @return modern English spelling
 	 */
-	 static String unicodeHandler(String input) {
+	static String unicodeHandler(String input) {
 		// define the mapping between special unicode characters and modern
 		// English spelling
 		Map<String, String> specialUnicodeCharToModernEnglishMapping = new HashMap<String, String>();
@@ -432,7 +466,8 @@ public class BioLemmatizer {
 		String output = input;
 		for (String unicode : specialUnicodeCharToModernEnglishMapping.keySet()) {
 			String regex = "\\" + unicode;
-			output = output.replaceAll(regex, specialUnicodeCharToModernEnglishMapping.get(unicode));
+			output = output.replaceAll(regex,
+					specialUnicodeCharToModernEnglishMapping.get(unicode));
 		}
 
 		return output;
@@ -440,7 +475,7 @@ public class BioLemmatizer {
 
 	/**
 	 * Lemmatize a string with POS tag using Lexicon only
-	 * 
+	 *
 	 * @param spelling
 	 *            an input string
 	 * @param partOfSpeech
@@ -474,7 +509,8 @@ public class BioLemmatizer {
 			// direct PennPOS tag search
 			lemma = wordLexicon.getLemma(spelling.toLowerCase(), partOfSpeech);
 			if (lemma.equals("*")) {
-				lemma = wordLexicon.getLemma(spelling.toUpperCase(), partOfSpeech);
+				lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+						partOfSpeech);
 			}
 			if (!lemma.equals("*")) {
 				lemmata = lemma;
@@ -487,7 +523,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalPennPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						lemmata = lemma;
@@ -502,7 +539,8 @@ public class BioLemmatizer {
 				for (String pos : nuPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						lemmata = lemma;
@@ -518,7 +556,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalNUPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						lemmata = lemma;
@@ -532,7 +571,8 @@ public class BioLemmatizer {
 			// direct NUPOS tag search
 			lemma = wordLexicon.getLemma(spelling.toLowerCase(), partOfSpeech);
 			if (lemma.equals("*")) {
-				lemma = wordLexicon.getLemma(spelling.toUpperCase(), partOfSpeech);
+				lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+						partOfSpeech);
 			}
 			if (!lemma.equals("*")) {
 				lemmata = lemma;
@@ -545,7 +585,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalNUPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						lemmata = lemma;
@@ -564,7 +605,8 @@ public class BioLemmatizer {
 			// if ( tagSetLabel.equals("NONE") ) {
 			lemmasAndCategories = getLemmasAndCategories(spelling.toLowerCase());
 			if (lemmasAndCategories.isEmpty()) {
-				lemmasAndCategories = getLemmasAndCategories(spelling.toUpperCase());
+				lemmasAndCategories = getLemmasAndCategories(spelling
+						.toUpperCase());
 			}
 		}
 
@@ -586,7 +628,7 @@ public class BioLemmatizer {
 
 	/**
 	 * Lemmatize a string with POS tag using lemmatization rules only
-	 * 
+	 *
 	 * @param spelling
 	 *            an input string
 	 * @param partOfSpeech
@@ -594,7 +636,8 @@ public class BioLemmatizer {
 	 * @return a LemmaEntry object containing lemma and POS information
 	 */
 	public LemmataEntry lemmatizeByRules(String spelling, String partOfSpeech) {
-		// option to have a dictionary for rule-based lemmatizer to validate results
+		// option to have a dictionary for rule-based lemmatizer to validate
+		// results
 		// lemmatizer.setDictionary(new HashSet<String>());
 
 		Map<String, String> lemmataAndLemmataTag = new HashMap<String, String>();
@@ -633,10 +676,12 @@ public class BioLemmatizer {
 				// Extract individual word parts.
 				// May be more than one for a
 				// contraction.
-				List<String> wordList = spellingTokenizer.extractWords(spelling);
+				List<String> wordList = spellingTokenizer
+						.extractWords(spelling);
 
 				// If just one word part, get its lemma.
-				if (!partOfSpeechTags.isCompoundTag(partOfSpeech) || (wordList.size() == 1)) {
+				if (!partOfSpeechTags.isCompoundTag(partOfSpeech)
+						|| (wordList.size() == 1)) {
 					if (lemmaClass.length() == 0) {
 						lemmata = lemmatizer.lemmatize(spelling);
 					} else {
@@ -659,7 +704,8 @@ public class BioLemmatizer {
 								lemmata = lemmata + lemmaSeparator;
 							}
 
-							LemmataEntry lemmaPiece = lemmatizeByRules(wordPiece, posTags[i]);
+							LemmataEntry lemmaPiece = lemmatizeByRules(
+									wordPiece, posTags[i]);
 
 							lemmata = lemmata + lemmaPiece.lemmasToString();
 						}
@@ -675,16 +721,18 @@ public class BioLemmatizer {
 	}
 
 	/**
-	 * Lemmatize a string with POS tag using both lexicon lookup and lemmatization rules This is the
-	 * preferred method as it gives the best lemmatization performance
-	 * 
+	 * Lemmatize a string with POS tag using both lexicon lookup and
+	 * lemmatization rules This is the preferred method as it gives the best
+	 * lemmatization performance
+	 *
 	 * @param spelling
 	 *            an input string
 	 * @param partOfSpeech
 	 *            POS tag of the input string
 	 * @return a LemmaEntry object containing lemma and POS information
 	 */
-	public LemmataEntry lemmatizeByLexiconAndRules(String spelling, String partOfSpeech) {
+	public LemmataEntry lemmatizeByLexiconAndRules(String spelling,
+			String partOfSpeech) {
 
 		Map<String, String> lemmataAndLemmataTag = new HashMap<String, String>();
 		String lemmata = spelling;
@@ -712,7 +760,8 @@ public class BioLemmatizer {
 			// direct PennPOS tag search
 			lemma = wordLexicon.getLemma(spelling.toLowerCase(), partOfSpeech);
 			if (lemma.equals("*")) {
-				lemma = wordLexicon.getLemma(spelling.toUpperCase(), partOfSpeech);
+				lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+						partOfSpeech);
 			}
 			if (!lemma.equals("*")) {
 				category = partOfSpeech;
@@ -724,7 +773,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalPennPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						category = pos;
@@ -738,7 +788,8 @@ public class BioLemmatizer {
 				for (String pos : nuPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						category = pos;
@@ -753,7 +804,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalNUPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						category = pos;
@@ -766,7 +818,8 @@ public class BioLemmatizer {
 			// direct NUPOS tag search
 			lemma = wordLexicon.getLemma(spelling.toLowerCase(), partOfSpeech);
 			if (lemma.equals("*")) {
-				lemma = wordLexicon.getLemma(spelling.toUpperCase(), partOfSpeech);
+				lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+						partOfSpeech);
 			}
 			if (!lemma.equals("*")) {
 				category = partOfSpeech;
@@ -778,7 +831,8 @@ public class BioLemmatizer {
 				for (String pos : hierarachicalNUPOSTag) {
 					lemma = wordLexicon.getLemma(spelling.toLowerCase(), pos);
 					if (lemma.equals("*")) {
-						lemma = wordLexicon.getLemma(spelling.toUpperCase(), pos);
+						lemma = wordLexicon.getLemma(spelling.toUpperCase(),
+								pos);
 					}
 					if (!lemma.equals("*")) {
 						category = pos;
@@ -796,7 +850,8 @@ public class BioLemmatizer {
 		if (tagSetLabel.equals("NONE")) {
 			lemmasAndCategories = getLemmasAndCategories(spelling.toLowerCase());
 			if (lemmasAndCategories.isEmpty()) {
-				lemmasAndCategories = getLemmasAndCategories(spelling.toUpperCase());
+				lemmasAndCategories = getLemmasAndCategories(spelling
+						.toUpperCase());
 			}
 		}
 
@@ -836,14 +891,16 @@ public class BioLemmatizer {
 					// Extract individual word parts.
 					// May be more than one for a
 					// contraction.
-					List<String> wordList = spellingTokenizer.extractWords(spelling);
-
+					List<String> wordList = spellingTokenizer
+							.extractWords(spelling);
 					// If just one word part, get its lemma.
-					if (!partOfSpeechTags.isCompoundTag(partOfSpeech) || (wordList.size() == 1)) {
+					if (!partOfSpeechTags.isCompoundTag(partOfSpeech)
+							|| (wordList.size() == 1)) {
 						if (lemmaClass.length() == 0) {
 							lemmata = lemmatizer.lemmatize(spelling);
 						} else {
-							lemmata = lemmatizer.lemmatize(spelling, lemmaClass);
+							lemmata = lemmatizer
+									.lemmatize(spelling, lemmaClass);
 						}
 					}
 					// More than one word part.
@@ -853,7 +910,8 @@ public class BioLemmatizer {
 					// compound lemma.
 					else {
 						lemmata = "";
-						String[] posTags = partOfSpeechTags.splitTag(partOfSpeech);
+						String[] posTags = partOfSpeechTags
+								.splitTag(partOfSpeech);
 
 						if (posTags.length == wordList.size()) {
 							for (int i = 0; i < wordList.size(); i++) {
@@ -862,7 +920,8 @@ public class BioLemmatizer {
 									lemmata = lemmata + lemmaSeparator;
 								}
 
-								LemmataEntry lemmaPiece = lemmatizeByLexiconAndRules(wordPiece, posTags[i]);
+								LemmataEntry lemmaPiece = lemmatizeByLexiconAndRules(
+										wordPiece, posTags[i]);
 
 								lemmata = lemmata + lemmaPiece.lemmasToString();
 							}
@@ -878,23 +937,23 @@ public class BioLemmatizer {
 	}
 
 	/**
-	 * Input arguments are parsed into a {@link BioLemmatizerCmdOpts} object. Valid input arguments
-	 * include:
-	 * 
+	 * Input arguments are parsed into a {@link BioLemmatizerCmdOpts} object.
+	 * Valid input arguments include:
+	 *
 	 * <pre>
 	 *  VAL    : Single input to be lemmatized
 	 *  VAL    : Part of speech of the single input to be lemmatized
-	 *  -f VAL : optional path to a lexicon file. If not set, the default lexicon 
+	 *  -f VAL : optional path to a lexicon file. If not set, the default lexicon
 	 *           available on the classpath is used
 	 *  -i VAL : the path to the input file
-	 *  -l     : if present, only the lemma is returned (part-of-speech information is 
+	 *  -l     : if present, only the lemma is returned (part-of-speech information is
 	 *           suppressed)
 	 *  -o VAL : the path to the output file
 	 *  -t     : if present, the interactive mode is used
 	 * </pre>
-	 * 
-	 * 
-	 * 
+	 *
+	 *
+	 *
 	 * @param args
 	 */
 	public static void main(String[] args) {
@@ -920,31 +979,41 @@ public class BioLemmatizer {
 		String inputStrPos = options.getInputStrPos();
 		File inputFile = options.getInputFile();
 		File outputFile = options.getOutputFile();
-		System.out.println("=========================================================");
-		System.out.println("=========================================================");
-		System.out.println("=========================================================");
+		System.out
+				.println("=========================================================");
+		System.out
+				.println("=========================================================");
+		System.out
+				.println("=========================================================");
 		System.out.println("Running BioLemmatizer....");
 		try {
 			if (useInteractiveMode) {
 				runInteractiveMode(bioLemmatizer, outputLemmaOnly, americanize);
 			} else if (inputStr != null) {
 				LemmataEntry lemmata;
-				if(americanize) {
-					lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(new Americanize().americanize(unicodeHandler(inputStr)), inputStrPos);
-				}	
-				else
-					lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(unicodeHandler(inputStr), inputStrPos);
+				if (americanize) {
+					lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+							new Americanize()
+									.americanize(unicodeHandler(inputStr)),
+							inputStrPos);
+				} else
+					lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+							unicodeHandler(inputStr), inputStrPos);
 				if (outputLemmaOnly) {
-					System.out.println("The lemma for '" +inputStr+ "' is: " + lemmata.lemmasToString());
+					System.out.println("The lemma for '" + inputStr + "' is: "
+							+ lemmata.lemmasToString());
 				} else {
-					System.out.println("The lemma for '" +inputStr+ "' is: " + lemmata);
+					System.out.println("The lemma for '" + inputStr + "' is: "
+							+ lemmata);
 				}
 			} else if (inputFile != null) {
 				if (outputFile == null) {
-					System.err.println("Output file must be set if the input file parameter is used.");
+					System.err
+							.println("Output file must be set if the input file parameter is used.");
 					parser.printUsage(System.err);
 				}
-				processInputFile(inputFile, outputFile, bioLemmatizer, outputLemmaOnly, americanize);
+				processInputFile(inputFile, outputFile, bioLemmatizer,
+						outputLemmaOnly, americanize);
 			} else {
 				System.err.println("Invalid input parameters...");
 				parser.printUsage(System.err);
@@ -952,9 +1021,12 @@ public class BioLemmatizer {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		System.out.println("=========================================================");
-		System.out.println("=========================================================");
-		System.out.println("=========================================================");
+		System.out
+				.println("=========================================================");
+		System.out
+				.println("=========================================================");
+		System.out
+				.println("=========================================================");
 	}
 
 	/**
@@ -964,31 +1036,40 @@ public class BioLemmatizer {
 	 * @param outputLemmaOnly
 	 * @throws IOException
 	 */
-	private static void processInputFile(File inputFile, File outputFile, BioLemmatizer bioLemmatizer,
-			boolean outputLemmaOnly, boolean americanize) throws IOException {
+	private static void processInputFile(File inputFile, File outputFile,
+			BioLemmatizer bioLemmatizer, boolean outputLemmaOnly,
+			boolean americanize) throws IOException {
 		Americanize convert = null;
-		if(americanize) 
+		if (americanize)
 			convert = new Americanize();
 		BufferedReader input;
 		BufferedWriter output;
 
 		try {
-			// input = FileReaderUtil.initBufferedReader(inputFile, CharacterEncoding.UTF_8);
-			input = new BufferedReader(new InputStreamReader(new FileInputStream(inputFile), Charset.forName("UTF-8")
-					.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
-					.onUnmappableCharacter(CodingErrorAction.REPORT)));
+			// input = FileReaderUtil.initBufferedReader(inputFile,
+			// CharacterEncoding.UTF_8);
+			input = new BufferedReader(new InputStreamReader(
+					new FileInputStream(inputFile), Charset.forName("UTF-8")
+							.newDecoder()
+							.onMalformedInput(CodingErrorAction.REPORT)
+							.onUnmappableCharacter(CodingErrorAction.REPORT)));
 		} catch (FileNotFoundException e) {
-			throw new RuntimeException("Unable to open the input file: " + inputFile.getAbsolutePath(), e);
+			throw new RuntimeException("Unable to open the input file: "
+					+ inputFile.getAbsolutePath(), e);
 		}
 
 		try {
-			// output = FileWriterUtil.initBufferedWriter(outputFile, CharacterEncoding.UTF_8,
+			// output = FileWriterUtil.initBufferedWriter(outputFile,
+			// CharacterEncoding.UTF_8,
 			// WriteMode.OVERWRITE, FileSuffixEnforcement.OFF);
-			output = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile, false), Charset
-					.forName("UTF-8").newEncoder().onMalformedInput(CodingErrorAction.REPORT)
-					.onUnmappableCharacter(CodingErrorAction.REPORT)));
+			output = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream(outputFile, false), Charset
+							.forName("UTF-8").newEncoder()
+							.onMalformedInput(CodingErrorAction.REPORT)
+							.onUnmappableCharacter(CodingErrorAction.REPORT)));
 		} catch (FileNotFoundException e) {
-			throw new RuntimeException("Unable to open the output file: " + outputFile.getAbsolutePath(), e);
+			throw new RuntimeException("Unable to open the output file: "
+					+ outputFile.getAbsolutePath(), e);
 		}
 
 		String line = null;
@@ -1007,10 +1088,12 @@ public class BioLemmatizer {
 				pos = pair[1];
 			}
 			LemmataEntry lemmata;
-			if(americanize)
-			    lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(convert.americanize(unicodeHandler(pair[0])), pos);
+			if (americanize)
+				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+						convert.americanize(unicodeHandler(pair[0])), pos);
 			else
-				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(unicodeHandler(pair[0]), pos);
+				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+						unicodeHandler(pair[0]), pos);
 			String result;
 			if (outputLemmaOnly) {
 				result = line + "\t" + lemmata.lemmasToString() + "\n";
@@ -1025,26 +1108,33 @@ public class BioLemmatizer {
 		output.close();
 	}
 
-	private static void runInteractiveMode(BioLemmatizer bioLemmatizer, boolean outputLemmaOnly, boolean americanize) throws IOException {
+	private static void runInteractiveMode(BioLemmatizer bioLemmatizer,
+			boolean outputLemmaOnly, boolean americanize) throws IOException {
 		Americanize convert = null;
-		if(americanize) 
+		if (americanize)
 			convert = new Americanize();
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		String input;
-		System.out.println("Running BioLemmatizer in interactive mode. Please type a word to be lemmatized with an optional part-of-speech, e.g. \"run\" or \"run NN\"");
+		System.out
+				.println("Running BioLemmatizer in interactive mode. Please type a word to be lemmatized with an optional part-of-speech, e.g. \"run\" or \"run NN\"");
 		while ((input = in.readLine()) != null && input.length() != 0) {
 			String[] arguments = input.split("\\s");
 			if (arguments.length > 2) {
-				System.out.println("Only one word to be lemmatized (with or without POS) is allowed");
+				System.out
+						.println("Only one word to be lemmatized (with or without POS) is allowed");
 				System.exit(0);
 			}
 			String spelling = arguments[0].trim();
-			String partOfSpeech = (arguments.length == 2) ? arguments[1].trim() : null;
-			LemmataEntry lemmata; 
-			if(americanize) 
-			    lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(convert.americanize(unicodeHandler(spelling)), partOfSpeech);
+			String partOfSpeech = (arguments.length == 2) ? arguments[1].trim()
+					: null;
+			LemmataEntry lemmata;
+			if (americanize)
+				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+						convert.americanize(unicodeHandler(spelling)),
+						partOfSpeech);
 			else
-				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(unicodeHandler(spelling), partOfSpeech);
+				lemmata = bioLemmatizer.lemmatizeByLexiconAndRules(
+						unicodeHandler(spelling), partOfSpeech);
 			if (outputLemmaOnly) {
 				System.out.println(lemmata.lemmasToString());
 			} else {
