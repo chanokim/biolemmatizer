@@ -13,6 +13,7 @@ import edu.northwestern.at.utils.StringUtils;
 public class MorphAdornerLemmatizer extends EnglishLemmatizer implements
 		Serializable {
 
+	private static final long serialVersionUID = 1L;
 	/** list of detachment rules. */
 	protected static String rulesFileName = "englishrules.txt";
 

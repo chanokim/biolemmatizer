@@ -13,6 +13,8 @@ import edu.northwestern.at.morphadorner.corpuslinguistics.lexicon.DefaultLexicon
  */
 public class BioWordLexicon extends DefaultLexicon implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	/** Resource path to word lexicon. */
 	protected static final String lexiconPath = "lexicon.lex";
 
