@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
 	<groupId>edu.ecdenver.ccp</groupId>
-  <artifactId>biolemmatizer</artifactId>
+  <artifactId>biolemmatizer-core</artifactId>
   <versioning>
     <release>1.2-serializable</release>
     <versions><version>1.2-serializable</version></versions>
