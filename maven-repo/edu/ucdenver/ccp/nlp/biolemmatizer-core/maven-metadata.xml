@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-	<groupId>edu.ecdenver.ccp.nlp</groupId>
+	<groupId>edu.ucdenver.ccp.nlp</groupId>
   <artifactId>biolemmatizer-core</artifactId>
   <versioning>
     <release>1.2-serializable</release>
